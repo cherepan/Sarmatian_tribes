@@ -1,0 +1,8 @@
+
+
+[
+  { "condition_feature": 19, "condition_value": 0, "plotting_feature": 20 },
+  { "condition_feature": 19, "condition_value": 1, "plotting_feature": 20 },
+  { "condition_feature": 19, "condition_value": 2, "plotting_feature": 20 },
+  { "condition_feature": 19, "plotting_feature": 20 }
+]
