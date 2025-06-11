@@ -1,8 +1,38 @@
 
 
 [
-  { "condition_feature": 19, "condition_value": 0, "plotting_feature": 20 },
-  { "condition_feature": 19, "condition_value": 1, "plotting_feature": 20 },
-  { "condition_feature": 19, "condition_value": 2, "plotting_feature": 20 },
-  { "condition_feature": 19, "plotting_feature": 20 }
+    { "condition_feature": 19, "condition_value": 0, "plotting_feature": 20 },
+    { "condition_feature": 19, "condition_value": 1, "plotting_feature": 20 },
+    { "condition_feature": 19, "condition_value": 2, "plotting_feature": 20 },
+    { "condition_feature": 19, "plotting_feature": 20 },
+    { "plotting_feature": 2 },
+    { "plotting_feature": 3 },
+    { "plotting_feature": 4 },
+    { "plotting_feature": 5 },
+    { "plotting_feature": 6 },
+    { "plotting_feature": 7 },
+    { "plotting_feature": 8 },
+    { "plotting_feature": 9 },
+    { "plotting_feature": 10 },
+    { "plotting_feature": 11 },
+    { "plotting_feature": 12 },
+    { "plotting_feature": 13 },
+    { "plotting_feature": 14 },
+    { "plotting_feature": 15 },
+    { "plotting_feature": 16 },
+    { "plotting_feature": 17 },
+    { "plotting_feature": 18 },
+    { "plotting_feature": 19 },
+    { "plotting_feature": 20 },
+    { "plotting_feature": 21 },
+    { "plotting_feature": 22 },
+    { "plotting_feature": 23 },
+    { "plotting_feature": 24 },
+    { "plotting_feature": 25 },
+    { "plotting_feature": 26 },
+    { "plotting_feature": 27 },
+    { "plotting_feature": 28 },
+    { "plotting_feature": 29 },
+    { "plotting_feature": 30 }
+    
 ]
