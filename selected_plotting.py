@@ -10,34 +10,51 @@ from sklearn.cluster import KMeans
 from sklearn.ensemble import IsolationForest
 from scipy.stats import zscore
 import json
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--csv", default="Berlisov_Monography_Sarmatian_burials.csv")
+parser.add_argument("--config", default="plots_config.json")
+parser.add_argument("--labels", default="feature_labels.json")
+args = parser.parse_args()
 
 
-input_file  = "Berlisov_Monography_Sarmatian_burials.csv"
-df = pd.read_csv(input_file, header=None)
+df = pd.read_csv(args.csv, header=None)
 
 
 df.describe()
 
 
-#for col in df.columns:
-#    print(f"Column {col}: sample values --- {df[col].unique()[:10]}")
 
-
-with open("plots_config.json", "r") as f: ## here index in the .cvs file is -1 w.r.t to Berlisov's monography
+with open(args.config, "r") as f: ## here index in the .cvs file is -1 w.r.t to Berlisov's monography
     configs = json.load(f)  
 
+with open(args.labels, "r") as f:
+    feature_labels = json.load(f)
 
+for col in df.columns:
+    unique_vals = sorted(df[col].dropna().unique())
+    print(f"Feature {col}: possible values {unique_vals}")
+    
 
 for config in configs:
     condition_feature = config.get("condition_feature")
     plotting_feature = config["plotting_feature"]
     condition_value  = config.get("condition_value", None) 
 
-    # Apply condition if present
+    # Apply the condition if present
     if condition_value is not None and condition_feature is not None:
         filtered = df[df[condition_feature] == condition_value]
-        condition_text = f"Feature {condition_feature} == {condition_value}"
-        filename = f"plotting_feature{plotting_feature}_if_feat{condition_feature}_eq{condition_value}.png"
+        cond_label = feature_labels.get(str(condition_feature), f"Feature {condition_feature}")
+        cond_label_full = f"{cond_label} (feature {condition_feature})"
+        condition_text = f"{cond_label_full} == {condition_value}"
+        
+        filename = (
+            f"plot_feat{plotting_feature}_if_feat{condition_feature}_eq{condition_value}.png"
+        )
+        
+#        condition_text = f"Feature {condition_feature} == {condition_value}"
+#        filename = f"plotting_feature{plotting_feature}_if_feat{condition_feature}_eq{condition_value}.png"
     else:
         filtered = df
         condition_text = f"(All rows)"
@@ -49,6 +66,12 @@ for config in configs:
         continue
 
 
+    # --- Determine label ---
+    label_name = feature_labels.get(str(plotting_feature), f"Feature {plotting_feature}")
+    label_full = f"{label_name} (feature {plotting_feature})"
+
+
+    
     # --- adjusted binning ---
     values = filtered[plotting_feature].dropna().unique()
     if len(values) < 20 and np.all(np.mod(values, 1) == 0):
@@ -57,14 +80,17 @@ for config in configs:
     else:
         bins = 30 # arbitrary
 
-
-    # --- Plot ---
+    # --- Plot ---        
+    os.makedirs("plots", exist_ok=True)
+    filename = os.path.join("plots", filename)
     plt.figure(figsize=(6, 4))
     plt.hist(filtered[plotting_feature], bins=bins, edgecolor='black')
-    plt.title(f"Feature {plotting_feature} | {condition_text}")
-    plt.xlabel(f"Feature {plotting_feature}")
+    plt.title(f"{label_full} | {condition_text}", fontsize=9)
+    print('--------------  ', label_full)
+    plt.xlabel(label_full)
     plt.ylabel("Frequency")
     plt.grid(True)
     plt.tight_layout()
     plt.savefig(filename, dpi=150)
     plt.close()
+
