@@ -36,7 +36,7 @@ for col in df.columns:
     unique_vals = sorted(df[col].dropna().unique())
     print(f"Feature {col}: possible values {unique_vals}")
     
-
+print("deb 1")
 for config in configs:
     condition_feature = config.get("condition_feature")
     plotting_feature = config["plotting_feature"]
@@ -59,18 +59,18 @@ for config in configs:
         filtered = df
         condition_text = f"(All rows)"
         filename = f"plot_feat{plotting_feature}_all.png"
-
+    print("deb 2")
 
     if filtered.empty:
         print(f"No data for {condition_text}")
         continue
-
+    print("deb 3")
 
     # --- Determine label ---
     label_name = feature_labels.get(str(plotting_feature), f"Feature {plotting_feature}")
     label_full = f"{label_name} (feature {plotting_feature})"
 
-
+    print("deb 4")
     
     # --- adjusted binning ---
     values = filtered[plotting_feature].dropna().unique()
@@ -79,7 +79,7 @@ for config in configs:
         bins = np.arange(min_val - 0.5, max_val + 1.5, 1)
     else:
         bins = 30 # arbitrary
-
+    print("deb 5")
     # --- Plot ---        
     os.makedirs("plots", exist_ok=True)
     filename = os.path.join("plots", filename)
