@@ -16,7 +16,7 @@ from sklearn.metrics import classification_report
 from xgboost import XGBClassifier
 from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering
 from sklearn.inspection import permutation_importance
-
+from sklearn.decomposition import FactorAnalysis
 
 
 class ArchaeologyAnalyzer:
@@ -48,14 +48,6 @@ class ArchaeologyAnalyzer:
         print(f"[INFO] Prepared data: X shape {self.X.shape}, target column = {target_column}")
 
         
-#    def prepare_data(self, drop_feature_value=None, feature_idx=3):
-#        if drop_feature_value is not None:
-#            self.df = self.df[self.df.iloc[:, feature_idx] != drop_feature_value]
-#        self.ids = self.df.iloc[:, 0].values
-#        self.X = self.df.iloc[:, 5:].values
-#        self.y = self.df.iloc[:, feature_idx].values
-
-
         
     def show_feature_values(self, idx):
         unique_vals = sorted(self.df.iloc[:, idx].dropna().unique())
@@ -179,26 +171,42 @@ class ArchaeologyAnalyzer:
         plt.close()
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--csv", default="DataBase_3.csv")
-    parser.add_argument("--config", default="plots_config.json")
-    parser.add_argument("--labels", default="feature_labels.json")
-    
-    args = parser.parse_args()
+    def run_factor_analysis(self, n_factors=5, max_features=100):
+        """
+        Perform Factor Analysis and plot the factor loadings heatmap.
+        Args:
+        n_factors (int): Number of latent factors to extract.
+        max_features (int): Max number of features to show for readability.
+        """
 
-    analyzer = ArchaeologyAnalyzer(args.csv, args.labels, args.config)
-    analyzer.prepare_data(drop_feature_value=11)
-    analyzer.show_feature_values(3)
 
-    analyzer.run_classifier(LogisticRegression(max_iter=1000), "Logistic Regression", scale=True)
-    analyzer.run_classifier(RandomForestClassifier(n_estimators=100, random_state=42), "Random Forest")
-    analyzer.run_classifier(GradientBoostingClassifier(n_estimators=100, learning_rate=0.1, random_state=42), "Gradient Boosting")
-    analyzer.run_classifier(SVC(kernel='rbf', C=1.0, gamma='scale'), "SVM", scale=True)
+        # Ensure data is scaled
+        X_scaled = self.scaler.fit_transform(self.X)
+        
+        # Factor Analysis
+        fa = FactorAnalysis(n_components=n_factors, random_state=42)
+        factors = fa.fit_transform(X_scaled)
+        loadings = fa.components_.T  # shape: (n_features, n_factors)
 
-    analyzer.encode_labels()
-    analyzer.run_classifier(XGBClassifier(use_label_encoder=False, eval_metric='mlogloss', random_state=42), "XGBoost")
 
-    analyzer.plot_selected_features()
-    analyzer.run_clustering(method="kmeans", n_clusters=5)
-    analyzer.run_clustering(method="dbscan")
+        feature_labels = self.feature_labels
+        feature_names = [self.feature_labels.get(str(i + 5), f"Feature {i+5}") for i in range(loadings.shape[0])]
+
+
+        # Create DataFrame with loadings
+        loading_df = pd.DataFrame(
+            loadings[:max_features],
+            index=feature_names[:max_features],
+            columns=[f"Factor {i+1}" for i in range(n_factors)]
+        )
+
+
+
+        # Plot heatmap
+        plt.figure(figsize=(12, 0.5 * max_features))
+        sns.heatmap(loading_df, annot=True, cmap="coolwarm", center=0, fmt=".2f")
+        plt.title(f"Factor Loadings (first {max_features} features)", fontsize=12)
+        plt.tight_layout()
+        plt.savefig(f"factor_analys_with_{max_features}_features_{n_factors}_factors.png")
+        plt.tight_layout()
+

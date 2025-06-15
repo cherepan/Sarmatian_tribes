@@ -123,7 +123,7 @@ def main():
 
 
     
-    analyzer.prepare_data(drop_feature_value=11, feature_idx=3, target_column=3)
+    analyzer.prepare_data(drop_feature_value=11, feature_idx=3, target_column=4)
     ##########   trining over target_column = 4 (archaelogical culture)
     #            Model  Accuracy       F1  Precision   Recall
     #    randomforest  0.868852 0.850477   0.878543 0.868852
@@ -145,7 +145,8 @@ def main():
 
 
 
-    models = ['svm','randomforest','xgboost','gradientboosting','logistic']
+#    models = ['svm','randomforest','xgboost','gradientboosting','logistic']
+    models = ['randomforest']
     run_classification(analyzer, models)
     compare_models(analyzer,models)
 
@@ -160,9 +161,10 @@ def main():
                                         
 
     # --- Clustering ---
-    analyzer.run_clustering(method="kmeans", n_clusters=5)
+    analyzer.run_clustering(method="kmeans", n_clusters=25)
  
-
+    # --- Factor Analysis
+    analyzer.run_factor_analysis(n_factors=5)
 
 if __name__ == "__main__":
     main()
