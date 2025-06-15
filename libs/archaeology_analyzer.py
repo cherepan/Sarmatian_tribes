@@ -31,13 +31,29 @@ class ArchaeologyAnalyzer:
         self.scaler = StandardScaler()
         self.le = LabelEncoder()
 
-
-    def prepare_data(self, drop_feature_value=None, feature_idx=3):
+    def prepare_data(self, drop_feature_value=None, feature_idx=3, target_column=3):
+        """
+        Prepares X, y, and ids from the raw DataFrame.
+        - drop_feature_value: optional value to drop from feature_idx column.
+        - feature_idx: used only for filtering rows (e.g., remove Dating=11).
+        - target_column: the column used for supervised learning (e.g., 3 or 4).
+        """
         if drop_feature_value is not None:
             self.df = self.df[self.df.iloc[:, feature_idx] != drop_feature_value]
+    
         self.ids = self.df.iloc[:, 0].values
-        self.X = self.df.iloc[:, 5:].values
-        self.y = self.df.iloc[:, feature_idx].values
+        self.X = self.df.iloc[:, 5:].values  # starting from 5th index
+        self.y = self.df.iloc[:, target_column].values
+        self.target_column = target_column
+        print(f"[INFO] Prepared data: X shape {self.X.shape}, target column = {target_column}")
+
+        
+#    def prepare_data(self, drop_feature_value=None, feature_idx=3):
+#        if drop_feature_value is not None:
+#            self.df = self.df[self.df.iloc[:, feature_idx] != drop_feature_value]
+#        self.ids = self.df.iloc[:, 0].values
+#        self.X = self.df.iloc[:, 5:].values
+#        self.y = self.df.iloc[:, feature_idx].values
 
 
         
