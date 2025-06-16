@@ -161,10 +161,12 @@ def main():
                                         
 
     # --- Clustering ---
-    analyzer.run_clustering(method="kmeans", n_clusters=25)
- 
+    analyzer.run_clustering(method="kmeans", n_clusters=5)
+    analyzer.run_factor_analysis(n_factors=10)
+#    analyzer.plot_feature_evolution(9)
     # --- Factor Analysis
-    analyzer.run_factor_analysis(n_factors=5)
-
+    for i in range(5,100):
+        analyzer.plot_feature_evolution(i)
+    
 if __name__ == "__main__":
     main()

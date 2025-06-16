@@ -171,7 +171,7 @@ class ArchaeologyAnalyzer:
         plt.close()
 
 
-    def run_factor_analysis(self, n_factors=5, max_features=100):
+    def run_factor_analysis(self, n_factors=5, max_features=30):
         """
         Perform Factor Analysis and plot the factor loadings heatmap.
         Args:
@@ -210,3 +210,43 @@ class ArchaeologyAnalyzer:
         plt.savefig(f"factor_analys_with_{max_features}_features_{n_factors}_factors.png")
         plt.tight_layout()
 
+
+
+    def plot_feature_evolution(self, feature_col, output_dir="plots"):
+        """
+        Visualize evolution of a feature across Region and Dating.
+        """
+        os.makedirs(output_dir, exist_ok=True)        
+        # Resolve feature name
+        feature_name = self.feature_labels.get(str(feature_col), f"Feature {feature_col}")
+
+        # Define columns
+        region_col = 'Region' if 'Region' in self.df.columns else self.df.columns[1]
+        date_col = 'Dating' if 'Dating' in self.df.columns else self.df.columns[3]
+
+        df_temp = self.df[[region_col, date_col, feature_col]].dropna()
+
+        # Ensure dating is numeric
+        df_temp[date_col] = pd.to_numeric(df_temp[date_col], errors='coerce')
+        df_temp = df_temp.dropna(subset=[date_col])
+
+        # Compute average values per (region, date)
+        grouped = df_temp.groupby([region_col, date_col])[feature_col].mean().reset_index()
+#        grouped.columns = ["Region", "Date", "AverageFeature"]
+
+
+        # Plot
+        plt.figure(figsize=(10, 6))
+        sns.lineplot(data=grouped, x=date_col, y=feature_col, hue=region_col, marker="o",  palette="Set2")
+        plt.title(f"Evolution of {feature_name} (column {feature_col}) by Region and Time")
+        plt.xlabel("Dating (column 4)")
+        plt.ylabel(f"Average presence of: {feature_name}")
+        plt.legend(title="Region")
+        plt.grid(True)
+        plt.tight_layout()
+
+        outpath = os.path.join(output_dir, f"evolution_feature_{feature_col}.png")
+        plt.savefig(outpath, dpi=150)
+        plt.close()
+
+        print(f"Saved plot: {outpath}")
