@@ -161,12 +161,20 @@ def main():
                                         
 
     # --- Clustering ---
-    analyzer.run_clustering(method="kmeans", n_clusters=5)
+    pca, X_pca =  analyzer.run_clustering(method="kmeans", n_clusters=5)
+#    analyzer.print_pca_feature_contributions(
+#    components=pca.components_,
+#    feature_names=analyzer.feature_labels
+#    )
+
+#    analyzer.print_pca_feature_contributions(pca_components=pca.components_, analyzer.feature_labels)
+
+    analyzer.plot_pca_feature_contributions(pca.components_, analyzer.feature_labels, top_n=15)
     analyzer.run_factor_analysis(n_factors=10)
 #    analyzer.plot_feature_evolution(9)
     # --- Factor Analysis
-    for i in range(5,100):
-        analyzer.plot_feature_evolution(i)
+#    for i in range(5,100):
+#        analyzer.plot_feature_evolution(i)
     
 if __name__ == "__main__":
     main()
