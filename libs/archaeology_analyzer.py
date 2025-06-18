@@ -14,7 +14,6 @@ from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.svm import SVC
 from sklearn.metrics import classification_report
 from xgboost import XGBClassifier
-from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering
 from sklearn.inspection import permutation_importance
 from sklearn.decomposition import FactorAnalysis
 from sklearn.mixture import GaussianMixture, BayesianGaussianMixture
