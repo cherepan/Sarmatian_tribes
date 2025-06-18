@@ -20,7 +20,7 @@ from sklearn.mixture import GaussianMixture, BayesianGaussianMixture
 from sklearn.cluster import (KMeans, MiniBatchKMeans, DBSCAN, OPTICS,
                              AgglomerativeClustering, SpectralClustering,
                              AffinityPropagation)
-
+from scipy.stats import ttest_ind
 
 
 class ArchaeologyAnalyzer:
@@ -34,7 +34,11 @@ class ArchaeologyAnalyzer:
         self.ids = None
         self.scaler = StandardScaler()
         self.le = LabelEncoder()
-
+        # Optional data containers
+        self.clustered_df = None        # will store PCA+cluster-labeled data
+        self.X_pca = None               # optional: PCA-transformed features
+        self.pca_model = None           # optional: PCA object itself
+        self.cluster_labels = None      # optional: array of cluster assignments
 
     def prepare_data(self, drop_feature_value=None, feature_idx=3, target_column=3, exclude_feature_indices=None):
         """
@@ -223,9 +227,131 @@ class ArchaeologyAnalyzer:
         self.pca_model = pca
         self.cluster_labels = labels
         return pca, X_pca
+
+    def explain_pca_clusters(self, n_clusters=2, top_n=20, output_dir="plots"):
+        """
+        Clusters the PCA-projected space and identifies which features distinguish the resulting clusters.
+        Does not modify self.df; creates self.clustered_df instead.
+        """
+        os.makedirs(output_dir, exist_ok=True)
+
+        # 1. PCA transformation
+        X_scaled = self.scaler.fit_transform(self.X)
+        pca = PCA(n_components=2)
+        X_pca = pca.fit_transform(X_scaled)
+
+        # 2. Clustering
+        cluster_labels = KMeans(n_clusters=n_clusters, random_state=42).fit_predict(X_pca)
+        self.clustered_df = self.df.copy()
+        self.clustered_df["pca_cluster"] = cluster_labels
+
+        # 3. Compare features
+        results = []
+        for i in range(self.X.shape[1]):
+            col_idx = i + 5
+            name = self.feature_labels.get(str(col_idx), f"Feature {col_idx}")
+            label_with_index = f"{name} ( {col_idx} )"
             
+            values0 = self.clustered_df[self.clustered_df["pca_cluster"] == 0].iloc[:, col_idx].dropna()
+            values1 = self.clustered_df[self.clustered_df["pca_cluster"] == 1].iloc[:, col_idx].dropna()
+
+            
+            if len(values0) > 10 and len(values1) > 10:
+                mean0 = values0.mean()
+                mean1 = values1.mean()
+                diff = abs(mean0 - mean1)
+                results.append((label_with_index, mean0, mean1, diff))
+
+
+        # 4. Export table
+        df_diff = pd.DataFrame(results, columns=["Feature", "Cluster 0 Mean", "Cluster 1 Mean", "Abs. Difference"])
+        df_diff.sort_values(by="Abs. Difference", ascending=False, inplace=True)
+        df_diff.to_csv(os.path.join(output_dir, "pca_cluster_feature_differences.csv"), index=False)
+
+        # 5. Plot
+        plt.figure(figsize=(10, 0.5 * top_n))
+        sns.heatmap(df_diff.head(top_n).set_index("Feature")[["Cluster 0 Mean", "Cluster 1 Mean"]],
+                    annot=True, fmt=".2f", cmap="coolwarm", center=0)
+        plt.title(f"Top {top_n} Feature Differences Between PCA Clusters")
+        plt.tight_layout()
+        plt.savefig(os.path.join(output_dir, f"pca_cluster_feature_diff_top{top_n}.png"))
+        plt.close()
+
+        print(f"[INFO] Saved top {top_n} feature difference heatmap and CSV.")
+
+
+
+
+
+        
+        
+    def get_cluster_data(self, cluster_id):
+        """
+        Returns rows from clustered_df corresponding to a specific PCA cluster.
+        """
+        if not hasattr(self, "clustered_df") or "pca_cluster" not in self.clustered_df.columns:
+            raise ValueError("No clustered data found. Run explain_pca_clusters() first.")
+
+        return self.clustered_df[self.clustered_df["pca_cluster"] == cluster_id].copy()
+
 
     
+    def compare_clusters_on_feature(self, feature_index, output_dir="plots/compare_clusters"):
+        """
+        Compares the distribution of a given feature between PCA clusters 0 and 1.
+        Saves a boxplot and prints statistical summary.
+        
+        Args:
+        feature_index (int): Column index of the feature to compare.
+        output_dir (str): Directory to save the resulting plot.
+        """
+
+        if self.clustered_df is None or "pca_cluster" not in self.clustered_df.columns:
+            raise ValueError("Run explain_pca_clusters() before using this method.")
+
+        os.makedirs(output_dir, exist_ok=True)
+
+        feature_name = self.feature_labels.get(str(feature_index), f"Feature {feature_index}")
+
+        df = self.clustered_df
+        vals0 = df[df["pca_cluster"] == 0].iloc[:, feature_index].dropna()
+        vals1 = df[df["pca_cluster"] == 1].iloc[:, feature_index].dropna()
+
+        mean0 = vals0.mean()
+        mean1 = vals1.mean()
+        diff = abs(mean0 - mean1)
+
+        t_stat, p_value = ttest_ind(vals0, vals1, equal_var=False)
+
+
+        print("Feature: {feature_name} (index {feature_index})")
+        print(f"Cluster 0 mean = {mean0:.3f}, Cluster 1 mean = {mean1:.3f}, |delta|= {diff:.3f}")
+        print(f"t-statistic = {t_stat:.3f}, p-value = {p_value:.4f}")
+
+        df_plot = pd.concat([
+            df[df["pca_cluster"] == 0][[feature_index]].assign(Cluster="Cluster 0"),
+            df[df["pca_cluster"] == 1][[feature_index]].assign(Cluster="Cluster 1")
+        ])
+        df_plot.columns = [feature_name, "Cluster"]
+
+        # Plot
+        plt.figure(figsize=(6, 4))
+        sns.boxplot(data=df_plot, x="Cluster", y=feature_name)
+        plt.title(f"{feature_name} ( {feature_index} ) by PCA Cluster")
+        plt.tight_layout()
+
+        # Save plot
+        safe_name = feature_name.replace(" ", "_").replace("/", "_")
+        filename = f"compare_feature_{feature_index}_{safe_name}.png"
+        outpath = os.path.join(output_dir, filename)
+        plt.savefig(outpath, dpi=150)
+        plt.close()
+
+        print(f"[INFO] Plot saved to: {outpath}")
+
+
+
+        
     ######  not very useful at the moment
     def print_pca_feature_contributions(self, pca_model, feature_labels=None, top_n=10):
         top_n = int(top_n)  # Ensure it's an integer
@@ -239,6 +365,7 @@ class ArchaeologyAnalyzer:
                 print(f"  {label}: {weight:.4f}")
 
 
+                
     def plot_pca_feature_contributions(self, components, feature_names, top_n=10):
         """
         Plot the top contributing features for the first two principal components.

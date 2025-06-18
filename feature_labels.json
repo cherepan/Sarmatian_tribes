@@ -105,8 +105,8 @@
     "104": "Horse/cow (location)",
     "105": "Pig/roe deer (carcass part)",
     "106": "Pig/roe deer (location)",
-    "107": "Other animals (species)",
-    "108": "Other animals (location)",
+    "107": "Other animals_species",
+    "108": "Other animals_location",
     "109": "Type of sub-kurgan burial",
     "110": "Ritual staffs"
 }

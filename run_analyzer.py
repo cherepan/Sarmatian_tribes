@@ -144,7 +144,12 @@ def main():
 #    pca, X_pca =  analyzer.run_clustering(method="gmm", n_clusters=5)
 #    pca, X_pca =  analyzer.run_clustering(method="bayesian", n_clusters=5)
 
-    
+
+    analyzer.explain_pca_clusters(n_clusters=2, top_n=50, output_dir="plots")
+    analyzer.compare_clusters_on_feature(10)
+    analyzer.compare_clusters_on_feature(107)
+    analyzer.compare_clusters_on_feature(22)
+
 #    analyzer.print_pca_feature_contributions(
 #    components=pca.components_,
 #    feature_names=analyzer.feature_labels
