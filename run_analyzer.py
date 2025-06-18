@@ -122,30 +122,8 @@ def main():
 
 
 
-    
-    analyzer.prepare_data(drop_feature_value=11, feature_idx=3, target_column=4)
-    ##########   trining over target_column = 4 (archaelogical culture)
-    #            Model  Accuracy       F1  Precision   Recall
-    #    randomforest  0.868852 0.850477   0.878543 0.868852
-    #gradientboosting  0.860656 0.848128   0.859468 0.860656
-    #         xgboost  0.860656 0.846843   0.861724 0.860656
-    #        logistic  0.844262 0.836599   0.837946 0.844262
-    #             svm  0.778689 0.733667   0.747282 0.778689
+    analyzer.prepare_data(drop_feature_value=11, feature_idx=3, target_column=4, exclude_feature_indices=[1,2,3,4])
 
-    ##########   trining over target_column = 3 (dating)
-    #         xgboost  0.795082 0.793379   0.807113 0.795082
-    #gradientboosting  0.795082 0.784947   0.810499 0.795082
-    #    randomforest  0.770492 0.753177   0.781117 0.770492
-    #        logistic  0.721311 0.711768   0.728053 0.721311
-    #             svm  0.672131 0.619396   0.669870 0.672131
-    
-    
-
-#x    analyzer.show_feature_values(4)
-
-
-
-#    models = ['svm','randomforest','xgboost','gradientboosting','logistic']
     models = ['randomforest']
     run_classification(analyzer, models)
     compare_models(analyzer,models)
@@ -153,15 +131,20 @@ def main():
 #    # --- Inspect one prediction manually ---
 #    if "XGBoost" in analyzer.models:
 #        inspect_random_sample(analyzer, analyzer.models["XGBoost"])
-#    if "Random Forest" in analyzer.models:
-#        inspect_random_sample(analyzer, analyzer.models["Random Forest"])
-#    if "SVM" in analyzer.models:
-#        inspect_random_sample(analyzer, analyzer.models["SVM"])
-
                                         
 
     # --- Clustering ---
     pca, X_pca =  analyzer.run_clustering(method="kmeans", n_clusters=5)
+#    pca, X_pca =  analyzer.run_clustering(method="minibatchkmeans", n_clusters=5)
+#    pca, X_pca =  analyzer.run_clustering(method="dbscan", n_clusters=5)
+#    pca, X_pca =  analyzer.run_clustering(method="optics", n_clusters=5)
+#    pca, X_pca =  analyzer.run_clustering(method="agglomerative", n_clusters=5)
+#    pca, X_pca =  analyzer.run_clustering(method="spectral", n_clusters=5)
+#    pca, X_pca =  analyzer.run_clustering(method="affinity", n_clusters=5)
+#    pca, X_pca =  analyzer.run_clustering(method="gmm", n_clusters=5)
+#    pca, X_pca =  analyzer.run_clustering(method="bayesian", n_clusters=5)
+
+    
 #    analyzer.print_pca_feature_contributions(
 #    components=pca.components_,
 #    feature_names=analyzer.feature_labels

@@ -17,6 +17,11 @@ from xgboost import XGBClassifier
 from sklearn.cluster import KMeans, DBSCAN, AgglomerativeClustering
 from sklearn.inspection import permutation_importance
 from sklearn.decomposition import FactorAnalysis
+from sklearn.mixture import GaussianMixture, BayesianGaussianMixture
+from sklearn.cluster import (KMeans, MiniBatchKMeans, DBSCAN, OPTICS,
+                             AgglomerativeClustering, SpectralClustering,
+                             AffinityPropagation)
+
 
 
 class ArchaeologyAnalyzer:
@@ -31,21 +36,37 @@ class ArchaeologyAnalyzer:
         self.scaler = StandardScaler()
         self.le = LabelEncoder()
 
-    def prepare_data(self, drop_feature_value=None, feature_idx=3, target_column=3):
+
+    def prepare_data(self, drop_feature_value=None, feature_idx=3, target_column=3, exclude_feature_indices=None):
         """
         Prepares X, y, and ids from the raw DataFrame.
         - drop_feature_value: optional value to drop from feature_idx column.
         - feature_idx: used only for filtering rows (e.g., remove Dating=11).
         - target_column: the column used for supervised learning (e.g., 3 or 4).
+        - exclude_feature_indices: list of column indices to exclude from X.
         """
         if drop_feature_value is not None:
             self.df = self.df[self.df.iloc[:, feature_idx] != drop_feature_value]
-    
+
         self.ids = self.df.iloc[:, 0].values
-        self.X = self.df.iloc[:, 5:].values  # starting from 5th index
+        all_feature_indices = list(range(5, self.df.shape[1]))  # all features starting from column 5
+
+        if exclude_feature_indices:
+            feature_cols = [i for i in all_feature_indices if i not in exclude_feature_indices]
+        else:
+            feature_cols = all_feature_indices
+
+        self.X = self.df.iloc[:, feature_cols].values
         self.y = self.df.iloc[:, target_column].values
         self.target_column = target_column
+
         print(f"[INFO] Prepared data: X shape {self.X.shape}, target column = {target_column}")
+        if exclude_feature_indices:
+            print(f"[INFO] Excluded features: {exclude_feature_indices}")
+
+
+
+
 
         
         
@@ -146,21 +167,49 @@ class ArchaeologyAnalyzer:
             print(f"Saved plot: {filename}")        
 
 
+    def run_clustering(self, method="kmeans", n_clusters=5):
+        """
+        Performs clustering using the specified method.
+        Supported methods: kmeans, minibatchkmeans, dbscan, optics,
+        agglomerative, spectral, affinity, gmm, bayesian.
+        """
 
-    def run_clustering(self, method="kmeans", n_clusters=3):
+
         X_scaled = self.scaler.fit_transform(self.X)
+
+        # Select clustering model
         if method == "kmeans":
             model = KMeans(n_clusters=n_clusters, random_state=42)
+        elif method == "minibatchkmeans":
+            model = MiniBatchKMeans(n_clusters=n_clusters, random_state=42)
         elif method == "dbscan":
             model = DBSCAN(eps=0.5, min_samples=5)
+        elif method == "optics":
+            model = OPTICS(min_samples=5, xi=0.05)
         elif method == "agglomerative":
             model = AgglomerativeClustering(n_clusters=n_clusters)
+        elif method == "spectral":
+            model = SpectralClustering(n_clusters=n_clusters, assign_labels="kmeans", random_state=42)
+        elif method == "affinity":
+            model = AffinityPropagation(random_state=42)
+        elif method == "gmm":
+            model = GaussianMixture(n_components=n_clusters, random_state=42)
+        elif method == "bayesian":
+            model = BayesianGaussianMixture(n_components=n_clusters, random_state=42)
         else:
-            raise ValueError("Unsupported clustering method")
+            raise ValueError(f"Unsupported clustering method: {method}")
 
-        labels = model.fit_predict(X_scaled)
+        # Compute cluster labels
+        if method in {"gmm", "bayesian"}:
+            labels = model.fit_predict(X_scaled)
+        else:
+            labels = model.fit_predict(X_scaled)
+
+        # Perform PCA projection to 2D
         pca = PCA(n_components=2)
         X_pca = pca.fit_transform(X_scaled)
+
+        # Visualize clustering result in PCA space
         plt.figure(figsize=(6, 5))
         plt.scatter(X_pca[:, 0], X_pca[:, 1], c=labels, cmap='tab10', s=10)
         plt.title(f"Clustering: {method} (PCA projection)")
@@ -169,8 +218,62 @@ class ArchaeologyAnalyzer:
         plt.tight_layout()
         plt.savefig(f"clustering_{method}.png")
         plt.close()
+        
+        # Save results for further use
+        self.X_pca = X_pca
+        self.pca_model = pca
+        self.cluster_labels = labels
+        return pca, X_pca
+            
+
+    
+    ######  not very useful at the moment
+    def print_pca_feature_contributions(self, pca_model, feature_labels=None, top_n=10):
+        top_n = int(top_n)  # Ensure it's an integer
+        components = pca_model.components_
+        for i, component in enumerate(components):
+            print(f"\nTop {top_n} contributions to PC{i+1}:")
+            indices = np.argsort(np.abs(component))[::-1][:top_n]
+            for idx in indices:
+                label = feature_labels.get(str(idx), f"Feature {idx}") if feature_labels else f"Feature {idx}"
+                weight = component[idx]
+                print(f"  {label}: {weight:.4f}")
 
 
+    def plot_pca_feature_contributions(self, components, feature_names, top_n=10):
+        """
+        Plot the top contributing features for the first two principal components.
+        
+        Parameters:
+        - components: PCA components_ array (n_components x n_features)
+        - feature_names: dict of feature labels {str(index): label}
+        - top_n: how many top features to show per component
+        """
+
+        n_components = min(2, components.shape[0])
+        fig, axes = plt.subplots(1, n_components, figsize=(7 * n_components, 5), sharey=True)
+
+        if n_components == 1:
+            axes = [axes]
+
+        for i in range(n_components):
+            comp = components[i]
+            indices = np.argsort(np.abs(comp))[::-1][:top_n]
+            top_features = [feature_names.get(str(idx), f"Feature {idx}") for idx in indices]
+            top_values = comp[indices]
+
+            axes[i].barh(top_features, top_values, color='slateblue')
+            axes[i].set_title(f'Top {top_n} contributors to PC{i + 1}', fontsize=12)
+            axes[i].set_xlabel('Contribution')
+            axes[i].invert_yaxis()
+            axes[i].grid(True)
+
+        plt.tight_layout()
+        os.makedirs("plots", exist_ok=True)
+        plt.savefig("plots/PCA_feature_contributions.png", dpi=150)
+        plt.close()
+
+                
     def run_factor_analysis(self, n_factors=5, max_features=30):
         """
         Perform Factor Analysis and plot the factor loadings heatmap.
